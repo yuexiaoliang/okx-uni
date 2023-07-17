@@ -130,7 +130,6 @@ const removeFresh = (item) => {
         :class="{ 'favorite--true': item.isFavorite }" @click="onFavoriteClick(item)"></uni-icons>
     </li>
   </ul>
-  <div class="footer-bar">123</div>
 </template>
 
 <style lang="scss" scoped>
