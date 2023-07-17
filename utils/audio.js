@@ -6,6 +6,7 @@ export const ring = () => {
   manager.autoplay = false;
   // manager.src = ringtone;
   manager.src = 'https://s1.aigei.com/pvaud/aud/mp3/af/aff80e3f644640fbbd4d1ce2cede4113.mp3?e=1689601440&token=P7S2Xpzfz11vAkASLTkfHN7Fw-oOZBecqeJaxypL:7UrHA76yZYKMG951mtNk35C-ymM=';
+  manager.loop = true
 
   manager.onPlay(() => {
     console.log('开始播放');
