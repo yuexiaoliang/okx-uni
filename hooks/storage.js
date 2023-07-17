@@ -1,12 +1,12 @@
 import { ref, watch } from 'vue';
 
 export const useStorageSync = (key, data) => {
-  const storage = ref(uni.getStorageSync(key) || data);
+  const store = ref(uni.getStorageSync(key) || data);
 
   watch(
-    storage,
+    () => store,
     (newVal) => {
-      uni.setStorageSync(key, newVal);
+      uni.setStorageSync(key, newVal.value);
     },
     {
       deep: true,
@@ -14,5 +14,5 @@ export const useStorageSync = (key, data) => {
     }
   );
 
-  return storage;
+  return store;
 };

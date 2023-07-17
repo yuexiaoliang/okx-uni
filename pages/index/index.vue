@@ -4,6 +4,9 @@ import { createWebSocketClient } from '@/utils/socket'
 import { ring } from '@/utils/audio'
 import { formatPrice } from '@/utils/format'
 import { useStorageSync } from '@/hooks/storage'
+import { useStore } from './hooks'
+
+const { setStoreByList, store } = useStore()
 
 const { play, pause } = ring()
 
@@ -57,10 +60,14 @@ const setList = () => {
 }
 
 watch(() => list.value, (val, old) => {
+  if (!val) return;
+
   oldList = val
 
+  setStoreByList(val)
+
   if (Array.isArray(val) && val.some(item => item.isFresh)) {
-    play()
+    // play()
   }
 }, {
   deep: true,
@@ -97,6 +104,8 @@ const onFavoriteClick = (item) => {
   } else {
     favoriteList.value = [...favoriteList.value, item.instId]
   }
+
+  item.isFavorite = !item.isFavorite
 }
 
 const removeFresh = (item) => {
@@ -132,7 +141,7 @@ const removeFresh = (item) => {
   </ul>
 </template>
 
-<style lang="scss" scoped>
+<style lang="scss">
 page {
   background-color: $uni-bg-color;
   color: $uni-text-color;
