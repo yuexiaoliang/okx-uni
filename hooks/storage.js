@@ -4,9 +4,9 @@ export const useStorageSync = (key, data) => {
   const store = ref(uni.getStorageSync(key) || data);
 
   watch(
-    () => store,
+    store,
     (newVal) => {
-      uni.setStorageSync(key, newVal.value);
+      uni.setStorageSync(key, newVal);
     },
     {
       deep: true,

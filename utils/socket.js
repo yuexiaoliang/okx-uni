@@ -83,6 +83,8 @@ export const createWebSocketClient = (options) => {
     socket?.close();
   };
 
+  connect()
+
   return {
     connect,
     send,

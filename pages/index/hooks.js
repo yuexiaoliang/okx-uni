@@ -1,47 +1,153 @@
+import { ref } from 'vue';
 import dayjs from 'dayjs';
+
 import { getMinuteAgo } from '@/utils/common';
+import { formatPrice } from '@/utils/format';
 import { useStorageSync } from '@/hooks/storage';
+import { PLAY_UP_RISING_VOLUME, PAUSE_INTERVAL } from '@/constants';
 
-export const useStore = () => {
-  const store = useStorageSync('date-store', []);
+// 重点关注
+const importantData = useStorageSync('important-data', {});
 
-  const clearStore = () => {
-    const newStore = [];
+// 历史记录
+const history = useStorageSync('history-data', {});
 
-    store.value.forEach((item) => {
-      const [key] = item;
+// 收藏的列表
+const favorites = useStorageSync('okx-favorite', []);
 
-      const n = getMinuteAgo(3);
-      if (key < n) {
-        return;
-      }
+// 着重关注
+export const useImportantData = () => {
+  // 设置重要数据
+  const setImportantData = (key, data) => {
+    const old = importantData.value?.[key];
 
-      newStore.push(item);
-    });
-
-    store.value = newStore;
-  };
-
-  const setStoreByList = (list) => {
-    clearStore();
-
-    const time = dayjs().format('YYYY-MM-DD HH:mm');
-
-    if (store.value.length > 0 && store.value[0][0] === time) {
-      store.value.splice(0, 1);
+    // item 如果是 时间字符串，则表示这个时间之前不再激活
+    if (typeof old === 'string') {
+      if (dayjs().isBefore(old)) return;
     }
 
-    const item = [time, {}];
+    importantData.value[key] = data;
+  };
 
-    list.forEach((_item) => {
-      item[1][_item.name] = _item.changePer;
-    });
+  // 删除重要数据
+  const removeImportantData = (key) => {
+    delete importantData.value[key];
+  };
 
-    store.value.unshift(item);
+  const hasImportantData = (key) => {
+    return importantData.value?.[key] === true;
   };
 
   return {
-    store,
-    setStoreByList
+    importantData,
+    setImportantData,
+    hasImportantData,
+    removeImportantData
+  };
+};
+
+// 历史记录
+export const useHistoryData = () => {
+  // 获取指定时间的数据
+  const getHistoryByTime = (time = getMinuteAgo(1)) => {
+    return history.value[time];
+  };
+
+  // 清除指定时间之前的数据
+  const clearHistoryBeforeTime = (time = getMinuteAgo(PAUSE_INTERVAL)) => {
+    Object.keys(history.value).forEach((key) => {
+      if (key < time) {
+        delete history.value[key];
+      }
+    });
+  };
+
+  // 设置指定时间的数据
+  const setHistoryByTime = (list, time = dayjs().format('YYYY-MM-DD HH:mm:ss')) => {
+    clearHistoryBeforeTime();
+
+    const obj = {};
+    list.forEach((_item) => {
+      obj[_item.name] = _item.changePer;
+    });
+
+    history.value[time] = obj;
+  };
+
+  return {
+    history,
+    getHistoryByTime,
+    clearHistoryBeforeTime,
+    setHistoryByTime
+  };
+};
+
+// 列表
+export const useList = () => {
+  const { getHistoryByTime } = useHistoryData();
+  const { setImportantData } = useImportantData();
+
+  const list = ref([]);
+
+  const setList = (data) => {
+    // 前一分钟的数据
+    const minuteAgoData = getHistoryByTime();
+
+    list.value = data.map((item) => {
+      const name = item.instId.split('-')[0];
+
+      if (minuteAgoData) {
+        // 前一分钟的涨幅
+        const oneMinuteAgoChangePer = minuteAgoData?.[name];
+
+        if (oneMinuteAgoChangePer) {
+          // 计算规则为一分钟之内上涨 N 以上
+          setImportantData(name, item.changePer - oneMinuteAgoChangePer > PLAY_UP_RISING_VOLUME);
+        }
+      }
+
+      const result = {
+        ...item,
+        name,
+
+        // 涨幅变化显示的文字
+        changePerText: (Number(item.changePer) * 100).toFixed(2) + '%',
+
+        // Logo 地址
+        logo: `https://static.okx.com/cdn/oksupport/asset/currency/icon/${name.toLowerCase()}.png`,
+
+        // 24小时成交量显示的文字
+        volume24hText: formatPrice(item.volume24h)
+      };
+
+      return result;
+    });
+  };
+
+  return {
+    list,
+    setList
+  };
+};
+
+export const useFavorite = () => {
+  // 是否已收藏
+  const hasFavorite = (name) => {
+    return favorites.value?.includes(name);
+  };
+
+  // 收藏按钮点击
+  const addToFavorites = (item) => {
+    if (favorites.value.includes(item.name)) {
+      favorites.value = favorites.value.filter((fav) => fav !== item.name);
+    } else {
+      favorites.value = [...favorites.value, item.name];
+    }
+  };
+
+  return {
+    favorites,
+    addToFavorites,
+    hasFavorite
   };
 };

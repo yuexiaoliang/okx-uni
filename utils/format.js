@@ -1,10 +1,14 @@
 // 转换为亿、万单位，保留两位小数
 export const formatPrice = (price) => {
-  if (price >= 100000000) {
-    return (price / 100000000).toFixed(2) + '亿'
-  } else if (price >= 10000) {
-    return (price / 10000).toFixed(2) + '万'
+  const n = Number(price)
+
+  if (isNaN(n)) return price
+
+  if (n >= 100000000) {
+    return (n / 100000000).toFixed(2) + '亿'
+  } else if (n >= 10000) {
+    return (n / 10000).toFixed(2) + '万'
   } else {
-    return price.toFixed(2)
+    return n.toFixed(2)
   }
 }

@@ -1,78 +1,38 @@
 <script setup>
-import { ref, watch, computed } from 'vue'
-import { createWebSocketClient } from '@/utils/socket'
-import { ring } from '@/utils/audio'
-import { formatPrice } from '@/utils/format'
-import { useStorageSync } from '@/hooks/storage'
-import { useStore } from './hooks'
+import { watch } from 'vue';
+import { createWebSocketClient } from '@/utils/socket';
+import { ring } from '@/utils/audio';
+import { getMinuteAfter } from '@/utils/common';
+import { useHistoryData, useList, useFavorite, useImportantData } from './hooks';
+import { PAUSE_INTERVAL } from '@/constants';
 
-const { setStoreByList, store } = useStore()
+const { setHistoryByTime } = useHistoryData();
 
-const { play, pause } = ring()
+const { list, setList } = useList();
 
-const wheelCount = ref(0)
+const { addToFavorites, hasFavorite } = useFavorite();
 
-const favoriteList = useStorageSync('okx-favorite', [])
-const listRaw = ref([])
+const { hasImportantData, setImportantData } = useImportantData();
 
-let oldList = []
-const list = ref([])
+const { play, pause  } = ring();
+play()
 
-const setList = () => {
-  list.value = listRaw.value.map(item => {
-    const name = item.instId.split('-')[0]
-    const result = {
-      ...item,
-      name,
-      changePerText: (Number(item.changePer) * 100).toFixed(2) + '%',
-      isFresh: false,
-      isFavorite: favoriteList.value.includes(item.instId),
-      logo: `https://static.okx.com/cdn/oksupport/asset/currency/icon/${name.toLowerCase()}.png`,
-      wheelCount: 1,
-      volume24hText: formatPrice(item.volume24h),
+watch(
+  () => list.value,
+  (val) => {
+    if (!Array.isArray(val)) return;
+
+    setHistoryByTime(val);
+
+    if (val.some((item) => hasImportantData(item.name))) {
+      play();
     }
-
-    if (!oldList.length) return result
-
-    const oldItem = oldList.find(old => old.instId === item.instId)
-
-    if (!oldItem) {
-      return result
-    }
-
-    result.wheelCount = oldItem.wheelCount + 1
-    result.isFresh = result.wheelCount < wheelCount.value && result.wheelCount <= 10
-
-    const oldIndex = oldList.indexOf(oldItem)
-    const newIndex = listRaw.value.indexOf(item)
-
-    const rankingChange = oldIndex - newIndex
-    const rankingChangeText = rankingChange ? rankingChange > 0 ? `↑ ${rankingChange}` : `↓ ${Math.abs(rankingChange)}` : ''
-
-    if (rankingChange !== oldItem.rankingChange) {
-      result.rankingChange = rankingChange
-      result.rankingChangeText = rankingChangeText
-    }
-
-    return result
-  })
-
-}
-
-watch(() => list.value, (val, old) => {
-  if (!val) return;
-
-  oldList = val
-
-  setStoreByList(val)
-
-  if (Array.isArray(val) && val.some(item => item.isFresh)) {
-    // play()
+  },
+  {
+    deep: true,
+    immediate: true
   }
-}, {
-  deep: true,
-  immediate: true
-})
+);
 
 const ws = createWebSocketClient({
   url: 'wss://wspri.okx.com:8443/ws/v5/inner-public',
@@ -83,42 +43,34 @@ const ws = createWebSocketClient({
   open() {
     ws.send({
       op: 'subscribe',
-      args: [{ channel: 'up-rank-s', ccy: 'USDT' },]
+      args: [{ channel: 'up-rank-s', ccy: 'USDT' }]
     });
   },
 
   message(data) {
     if (!data.data?.[0]?.utc8) return;
-    listRaw.value = data.data[0].utc8
-    setList()
-
-    if (wheelCount.value > 5000) wheelCount.value = 0;
-    wheelCount.value += 1
+    setList(data.data[0].utc8);
   }
 });
-ws.connect()
-
-const onFavoriteClick = (item) => {
-  if (item.isFavorite) {
-    favoriteList.value = favoriteList.value.filter(fav => fav !== item.instId)
-  } else {
-    favoriteList.value = [...favoriteList.value, item.instId]
-  }
-
-  item.isFavorite = !item.isFavorite
-}
 
 const removeFresh = (item) => {
-  item.isFresh = false
-  pause()
-}
+  // 停止响铃
+  pause();
+
+  // 使 3 分钟内不再响铃
+  setImportantData(item.name, getMinuteAfter(PAUSE_INTERVAL));
+};
 </script>
 
 <template>
   <ul class="list">
-    <li v-for="item in list" class="list__item" :class="{
-      'list__item--fresh': item.isFresh,
-    }">
+    <li
+      v-for="item in list"
+      class="list__item"
+      :class="{
+        'list__item--fresh': hasImportantData(item.name)
+      }"
+    >
       <image :src="item.logo" mode="aspectFit" class="logo"></image>
 
       <div class="info">
@@ -128,15 +80,19 @@ const removeFresh = (item) => {
 
       <div class="price">{{ item.lastPrice }}</div>
 
-      <div class="change-per" :class="{
-        'change-per--up': item.changePer > 0,
-        'change-per--down': item.changePer < 0,
-      }">{{ item.changePerText }}</div>
+      <div
+        class="change-per"
+        :class="{
+          'change-per--up': item.changePer > 0,
+          'change-per--down': item.changePer < 0
+        }"
+      >
+        {{ item.changePerText }}
+      </div>
 
-      <uni-icons v-if="item.isFresh" type="circle-filled" size="24" style="color: #fff" class="favorite"
-        @click="removeFresh(item)"></uni-icons>
-      <uni-icons v-else :type="item.isFavorite ? 'star-filled' : 'star'" size="24" class="favorite"
-        :class="{ 'favorite--true': item.isFavorite }" @click="onFavoriteClick(item)"></uni-icons>
+      <uni-icons v-if="hasImportantData(item.name)" type="circle-filled" size="24" style="color: #fff" class="favorite" @click="removeFresh(item)"></uni-icons>
+
+      <uni-icons v-else :type="hasFavorite(item.name) ? 'star-filled' : 'star'" size="24" class="favorite" :class="{ 'favorite--true': hasFavorite(item.name) }" @click="addToFavorites(item)"></uni-icons>
     </li>
   </ul>
 </template>
@@ -163,7 +119,7 @@ page {
     border-radius: $uni-border-radius;
 
     &--fresh {
-      animation: bg-color-change .7s infinite alternate;
+      animation: bg-color-change 0.7s infinite alternate;
 
       @keyframes bg-color-change {
         0% {
