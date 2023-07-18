@@ -25,7 +25,7 @@ watch(
     setHistoryByTime(val);
 
     if (val.some((item) => hasImportantData(item.name))) {
-      // play();
+      play();
     }
   },
   {
@@ -37,8 +37,8 @@ watch(
 const ws = createWebSocketClient({
   url: 'wss://wspri.okx.com:8443/ws/v5/inner-public',
   pingInterval: 30000,
-  reconnectInterval: 10000,
-  maxReconnectAttempts: 5,
+  reconnectInterval: 3000,
+  maxReconnectAttempts: 20,
 
   open() {
     ws.send({

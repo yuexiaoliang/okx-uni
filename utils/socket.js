@@ -11,6 +11,10 @@ export const createWebSocketClient = (options) => {
   let reconnectAttempts = 0;
 
   const connect = () => {
+    uni.showLoading({
+      title: '连接中...'
+    });
+
     socket = uni.connectSocket({
       url: options.url,
       complete() {}
@@ -18,6 +22,7 @@ export const createWebSocketClient = (options) => {
 
     socket.onOpen(() => {
       console.log('WebSocket连接已打开');
+      uni.hideLoading();
       options.open();
       reconnectAttempts = 0;
       startHeartbeat();
@@ -45,11 +50,21 @@ export const createWebSocketClient = (options) => {
     });
   };
 
+  const send = (message) => {
+    socket.send({
+      data: typeof message === 'string' ? message : JSON.stringify(message)
+    });
+  };
+
+  const close = () => {
+    socket?.close();
+  };
+
   const startHeartbeat = () => {
     stopHeartbeat(); // 先停止之前的心跳定时器
 
     const sendHeartbeat = () => {
-      socket.send('ping');
+      send('ping')
     };
 
     pingIntervalId = setInterval(sendHeartbeat, options.pingInterval);
@@ -68,22 +83,16 @@ export const createWebSocketClient = (options) => {
     reconnectAttempts++;
     console.log(`正在尝试重新连接，第 ${reconnectAttempts} 次`);
 
+    uni.showLoading({
+      title: '重连中...'
+    });
+
     setTimeout(() => {
       connect();
     }, options.reconnectInterval);
   };
 
-  const send = (message) => {
-    socket.send({
-      data: typeof message === 'string' ? message : JSON.stringify(message)
-    });
-  };
-
-  const close = () => {
-    socket?.close();
-  };
-
-  connect()
+  connect();
 
   return {
     connect,

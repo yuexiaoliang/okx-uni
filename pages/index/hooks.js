@@ -125,7 +125,7 @@ export const useList = () => {
         volume24hText: formatPrice(item.volume24h),
 
         // 24小时成交额显示的文字
-        turnOver24hText: formatPrice(item.turnOver24h),
+        turnOver24hText: formatPrice(item.turnOver24h)
       };
 
       return result;
