@@ -50,7 +50,21 @@ export const useImportantData = () => {
 export const useHistoryData = () => {
   // 获取指定时间的数据，默认一分钟
   const getHistoryByTime = (time = getMinuteAgo(1)) => {
-    return history.value[time];
+    let result = history.value[time];
+
+    // 如果没找到，则往前找
+    if (!result) {
+      const keys = Object.keys(history.value);
+      for (let i = keys.length - 1; i >= 0; i--) {
+        const key = keys[i];
+        if (key < time) {
+          result = history.value[key];
+          break;
+        }
+      }
+    }
+
+    return result || {};
   };
 
   // 清除指定时间之前的数据
