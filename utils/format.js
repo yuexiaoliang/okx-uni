@@ -12,3 +12,11 @@ export const formatPrice = (price) => {
     return n.toFixed(2)
   }
 }
+
+
+
+export const formatPercent = (percent) => {
+  const n = Number(percent)
+  if (isNaN(n)) return percent
+  return (n * 100).toFixed(2) + '%'
+}

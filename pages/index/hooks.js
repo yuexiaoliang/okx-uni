@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import dayjs from 'dayjs';
 
 import { getMinuteAgo } from '@/utils/common';
-import { formatPrice } from '@/utils/format';
+import { formatPrice, formatPercent } from '@/utils/format';
 import { useStorageSync } from '@/hooks/storage';
 import { PLAY_UP_RISING_VOLUME, PAUSE_INTERVAL } from '@/constants';
 
@@ -48,7 +48,7 @@ export const useImportantData = () => {
 
 // 历史记录
 export const useHistoryData = () => {
-  // 获取指定时间的数据
+  // 获取指定时间的数据，默认一分钟
   const getHistoryByTime = (time = getMinuteAgo(1)) => {
     return history.value[time];
   };
@@ -62,13 +62,16 @@ export const useHistoryData = () => {
     });
   };
 
-  // 设置指定时间的数据
+  // 设置指定时间的数据，默认当前时间
   const setHistoryByTime = (list, time = dayjs().format('YYYY-MM-DD HH:mm:ss')) => {
     clearHistoryBeforeTime();
 
     const obj = {};
-    list.forEach((_item) => {
-      obj[_item.name] = _item.changePer;
+    list.forEach((_item, index) => {
+      obj[_item.name] = {
+        changePer: _item.changePer,
+        ranking: index
+      };
     });
 
     history.value[time] = obj;
@@ -98,7 +101,7 @@ export const useList = () => {
 
       if (minuteAgoData) {
         // 前一分钟的涨幅
-        const oneMinuteAgoChangePer = minuteAgoData?.[name];
+        const oneMinuteAgoChangePer = minuteAgoData?.[name]?.changePer;
 
         if (oneMinuteAgoChangePer) {
           // 计算规则为一分钟之内上涨 N 以上
@@ -111,13 +114,18 @@ export const useList = () => {
         name,
 
         // 涨幅变化显示的文字
-        changePerText: (Number(item.changePer) * 100).toFixed(2) + '%',
+        changePerText: formatPercent(item.changePer),
 
         // Logo 地址
         logo: `https://static.okx.com/cdn/oksupport/asset/currency/icon/${name.toLowerCase()}.png`,
 
+        old: minuteAgoData?.[name],
+
         // 24小时成交量显示的文字
-        volume24hText: formatPrice(item.volume24h)
+        volume24hText: formatPrice(item.volume24h),
+
+        // 24小时成交额显示的文字
+        turnOver24hText: formatPrice(item.turnOver24h),
       };
 
       return result;

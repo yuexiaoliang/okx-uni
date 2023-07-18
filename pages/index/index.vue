@@ -3,6 +3,7 @@ import { watch } from 'vue';
 import { createWebSocketClient } from '@/utils/socket';
 import { ring } from '@/utils/audio';
 import { getMinuteAfter } from '@/utils/common';
+import { formatPercent } from '@/utils/format';
 import { useHistoryData, useList, useFavorite, useImportantData } from './hooks';
 import { PAUSE_INTERVAL } from '@/constants';
 
@@ -14,8 +15,7 @@ const { addToFavorites, hasFavorite } = useFavorite();
 
 const { hasImportantData, setImportantData } = useImportantData();
 
-const { play, pause  } = ring();
-play()
+const { play, pause } = ring();
 
 watch(
   () => list.value,
@@ -25,7 +25,7 @@ watch(
     setHistoryByTime(val);
 
     if (val.some((item) => hasImportantData(item.name))) {
-      play();
+      // play();
     }
   },
   {
@@ -60,12 +60,16 @@ const removeFresh = (item) => {
   // 使 3 分钟内不再响铃
   setImportantData(item.name, getMinuteAfter(PAUSE_INTERVAL));
 };
+
+const getItemRankingChange = (item, index) => {
+  return index - item.old.ranking;
+};
 </script>
 
 <template>
   <ul class="list">
     <li
-      v-for="item in list"
+      v-for="(item, index) in list"
       class="list__item"
       :class="{
         'list__item--fresh': hasImportantData(item.name)
@@ -75,10 +79,22 @@ const removeFresh = (item) => {
 
       <div class="info">
         <div class="name">{{ item.name }}</div>
-        <div class="volume">{{ item.volume24hText }}</div>
+        <div class="volume">{{ item.turnOver24hText }}</div>
       </div>
 
       <div class="price">{{ item.lastPrice }}</div>
+
+      <div
+        v-if="item.old"
+        class="ranking-change"
+        :class="{
+          'ranking-change--up': getItemRankingChange(item, index) > 0,
+          'ranking-change--down': getItemRankingChange(item, index) < 0
+        }"
+      >
+        {{ getItemRankingChange(item, index) === 0 ? '-' : getItemRankingChange(item, index) > 0 ? '↑' : '↓' }}
+        {{ getItemRankingChange(item, index) === 0 ? '-' : Math.abs(getItemRankingChange(item, index)) }}
+      </div>
 
       <div
         class="change-per"
@@ -88,6 +104,7 @@ const removeFresh = (item) => {
         }"
       >
         {{ item.changePerText }}
+        <div v-if="item.old" class="change">{{ formatPercent(item.changePer - item.old.changePer) }}</div>
       </div>
 
       <uni-icons v-if="hasImportantData(item.name)" type="circle-filled" size="24" style="color: #fff" class="favorite" @click="removeFresh(item)"></uni-icons>
@@ -157,13 +174,30 @@ page {
       margin-left: auto;
     }
 
+    .ranking-change {
+      margin-left: $uni-spacing-row-sm;
+      width: 30px;
+      text-align: right;
+
+      &--up {
+        color: $uni-color-warning;
+      }
+
+      &--down {
+        color: $uni-color-error;
+      }
+    }
+
     .change-per {
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      margin-left: $uni-spacing-row-base;
+      margin-left: 12px;
+      padding: 3px 0;
       width: 62px;
-      height: 20px;
+      min-height: 18px;
+      line-height: 1;
       background-color: $uni-bg-color;
       border-radius: 2px;
 
@@ -173,6 +207,13 @@ page {
 
       &--down {
         background-color: $uni-color-error;
+      }
+
+      .change {
+        margin-top: 3px;
+        font-size: $uni-font-size-sm;
+        color: #000;
+        transform: scale3d(0.8, 0.8, 1);
       }
     }
 
