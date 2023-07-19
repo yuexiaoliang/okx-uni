@@ -52,8 +52,8 @@ const currentItem = ref({});
 const calcVisible = ref(false);
 const onItemClick = (item) => {
   currentItem.value = item;
-  calcVisible.value = true
-}
+  calcVisible.value = true;
+};
 
 watch(
   () => list.value,
@@ -115,9 +115,13 @@ watch(
         <div v-if="item.old" class="change">{{ formatPercent(item.changePer - item.old.changePer) }}</div>
       </div>
 
-      <uni-icons v-if="hasImportantData(item.name)" type="circle-filled" size="24" style="color: #fff" class="favorite" @click.capture.stop="removeFresh(item)"></uni-icons>
+      <div v-if="hasImportantData(item.name)" @click.capture.stop="removeFresh(item)">
+        <uni-icons type="circle-filled" size="24" style="color: #fff" class="favorite"></uni-icons>
+      </div>
 
-      <uni-icons v-else :type="hasFavorite(item.name) ? 'star-filled' : 'star'" size="24" class="favorite" :class="{ 'favorite--true': hasFavorite(item.name) }" @click.capture.stop="addToFavorites(item)"></uni-icons>
+      <div v-else @click.stop="addToFavorites(item)">
+        <uni-icons :type="hasFavorite(item.name) ? 'star-filled' : 'star'" size="24" class="favorite" :class="{ 'favorite--true': hasFavorite(item.name) }"></uni-icons>
+      </div>
     </li>
   </ul>
 

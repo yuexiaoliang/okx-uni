@@ -15,7 +15,7 @@ const emit = defineEmits(['update:visible']);
 const popupRef = ref(null);
 
 const open = () => {
-  popupRef.value?.open('bottom');
+  popupRef.value?.open('center');
 };
 
 const close = () => {
@@ -84,6 +84,7 @@ const onPopupChange = (e) => {
 
 <style lang="scss" scoped>
 .calc-price {
+  width: 70vw;
   padding: 15px;
 
   .name {
@@ -104,8 +105,9 @@ const onPopupChange = (e) => {
   }
 
   .price {
+    padding: 10px 0;
     text-align: center;
-    font-size: 20px;
+    font-size: 22px;
     color: $uni-color-warning;
   }
 
@@ -132,9 +134,8 @@ const onPopupChange = (e) => {
     }
 
     .input {
-      width: 100%;
       height: 100%;
-      font-size: 14px;
+      font-size: 16px;
       text-align: center;
       border-bottom: 1px solid $uni-border-color;
     }
