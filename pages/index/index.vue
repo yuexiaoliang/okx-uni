@@ -1,10 +1,11 @@
 <script setup>
-import { watch } from 'vue';
+import { watch, ref } from 'vue';
 import { createWebSocketClient } from '@/utils/socket';
 import { getMinuteAfter } from '@/utils/common';
 import { formatPercent } from '@/utils/format';
 import { useHistoryData, useList, useFavorite, useImportantData, useRing } from './hooks';
 import { PAUSE_INTERVAL } from '@/constants';
+import Calc from '@/components/calc.vue';
 
 const { setHistoryByTime } = useHistoryData();
 
@@ -15,23 +16,6 @@ const { addToFavorites, hasFavorite } = useFavorite();
 const { hasImportantData, setImportantData } = useImportantData();
 
 const { playRing, pauseRing } = useRing();
-
-watch(
-  () => list.value,
-  (val) => {
-    if (!Array.isArray(val)) return;
-
-    setHistoryByTime(val);
-
-    if (val.some((item) => hasImportantData(item.name))) {
-      playRing();
-    }
-  },
-  {
-    deep: true,
-    immediate: true
-  }
-);
 
 const ws = createWebSocketClient({
   url: 'wss://wspri.okx.com:8443/ws/v5/inner-public',
@@ -63,6 +47,30 @@ const removeFresh = (item) => {
 const getItemRankingChange = (item, index) => {
   return index - item.old.ranking;
 };
+
+const currentItem = ref({});
+const calcVisible = ref(false);
+const onItemClick = (item) => {
+  currentItem.value = item;
+  calcVisible.value = true
+}
+
+watch(
+  () => list.value,
+  (val) => {
+    if (!Array.isArray(val)) return;
+
+    setHistoryByTime(val);
+
+    if (val.some((item) => hasImportantData(item.name))) {
+      playRing();
+    }
+  },
+  {
+    deep: true,
+    immediate: true
+  }
+);
 </script>
 
 <template>
@@ -73,6 +81,7 @@ const getItemRankingChange = (item, index) => {
       :class="{
         'list__item--fresh': hasImportantData(item.name)
       }"
+      @click="onItemClick(item)"
     >
       <image :src="item.logo" mode="aspectFit" class="logo"></image>
 
@@ -106,11 +115,13 @@ const getItemRankingChange = (item, index) => {
         <div v-if="item.old" class="change">{{ formatPercent(item.changePer - item.old.changePer) }}</div>
       </div>
 
-      <uni-icons v-if="hasImportantData(item.name)" type="circle-filled" size="24" style="color: #fff" class="favorite" @click="removeFresh(item)"></uni-icons>
+      <uni-icons v-if="hasImportantData(item.name)" type="circle-filled" size="24" style="color: #fff" class="favorite" @click.capture.stop="removeFresh(item)"></uni-icons>
 
-      <uni-icons v-else :type="hasFavorite(item.name) ? 'star-filled' : 'star'" size="24" class="favorite" :class="{ 'favorite--true': hasFavorite(item.name) }" @click="addToFavorites(item)"></uni-icons>
+      <uni-icons v-else :type="hasFavorite(item.name) ? 'star-filled' : 'star'" size="24" class="favorite" :class="{ 'favorite--true': hasFavorite(item.name) }" @click.capture.stop="addToFavorites(item)"></uni-icons>
     </li>
   </ul>
+
+  <calc v-model:visible="calcVisible" :value="currentItem" />
 </template>
 
 <style lang="scss">

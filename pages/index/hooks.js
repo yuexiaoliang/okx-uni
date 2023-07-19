@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import ringtone from '@/static/audios/ringtone.mp3';
 
 import { getMinuteAgo, getSecondAgo } from '@/utils/common';
-import { formatPrice, formatPercent } from '@/utils/format';
+import { formatPrice, formatPercent, formatFloat } from '@/utils/format';
 import { useStorageSync } from '@/hooks/storage';
 import { PLAY_UP_RISING_VOLUME, PAUSE_INTERVAL } from '@/constants';
 
@@ -141,7 +141,10 @@ export const useList = () => {
         volume24hText: formatPrice(item.volume24h),
 
         // 24小时成交额显示的文字
-        turnOver24hText: formatPrice(item.turnOver24h)
+        turnOver24hText: formatPrice(item.turnOver24h),
+
+        // 开盘价（原价）
+        open: formatFloat(calcOpen(item)),
       };
 
       return result;
@@ -207,3 +210,8 @@ export const useRing = () => {
 
   return { playRing, pauseRing, toggleRing, ring };
 };
+
+function calcOpen(value) {
+  const { changePer, lastPrice } = value;
+  return Number(lastPrice) / (1 + Number(changePer));
+}
