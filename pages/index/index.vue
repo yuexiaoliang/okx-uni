@@ -1,10 +1,9 @@
 <script setup>
 import { watch } from 'vue';
 import { createWebSocketClient } from '@/utils/socket';
-import { ring } from '@/utils/audio';
 import { getMinuteAfter } from '@/utils/common';
 import { formatPercent } from '@/utils/format';
-import { useHistoryData, useList, useFavorite, useImportantData } from './hooks';
+import { useHistoryData, useList, useFavorite, useImportantData, useRing } from './hooks';
 import { PAUSE_INTERVAL } from '@/constants';
 
 const { setHistoryByTime } = useHistoryData();
@@ -15,7 +14,7 @@ const { addToFavorites, hasFavorite } = useFavorite();
 
 const { hasImportantData, setImportantData } = useImportantData();
 
-const { play, pause } = ring();
+const { playRing, pauseRing } = useRing();
 
 watch(
   () => list.value,
@@ -25,7 +24,7 @@ watch(
     setHistoryByTime(val);
 
     if (val.some((item) => hasImportantData(item.name))) {
-      play();
+      playRing();
     }
   },
   {
@@ -55,7 +54,7 @@ const ws = createWebSocketClient({
 
 const removeFresh = (item) => {
   // 停止响铃
-  pause();
+  pauseRing();
 
   // 使 3 分钟内不再响铃
   setImportantData(item.name, getMinuteAfter(PAUSE_INTERVAL));

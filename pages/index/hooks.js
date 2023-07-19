@@ -1,7 +1,9 @@
 import { ref } from 'vue';
 import dayjs from 'dayjs';
 
-import { getMinuteAgo } from '@/utils/common';
+import ringtone from '@/static/audios/ringtone.mp3';
+
+import { getMinuteAgo, getSecondAgo } from '@/utils/common';
 import { formatPrice, formatPercent } from '@/utils/format';
 import { useStorageSync } from '@/hooks/storage';
 import { PLAY_UP_RISING_VOLUME, PAUSE_INTERVAL } from '@/constants';
@@ -13,7 +15,7 @@ const importantData = useStorageSync('important-data', {});
 const history = useStorageSync('history-data', {});
 
 // 收藏的列表
-const favorites = useStorageSync('okx-favorite', []);
+const favorites = useStorageSync('favorites-data', []);
 
 // 着重关注
 export const useImportantData = () => {
@@ -48,8 +50,8 @@ export const useImportantData = () => {
 
 // 历史记录
 export const useHistoryData = () => {
-  // 获取指定时间的数据，默认一分钟
-  const getHistoryByTime = (time = getMinuteAgo(1)) => {
+  // 获取指定时间的数据，默认30秒前
+  const getHistoryByTime = (time = getSecondAgo(30)) => {
     let result = history.value[time];
 
     // 如果没找到，则往前找
@@ -172,4 +174,36 @@ export const useFavorite = () => {
     addToFavorites,
     hasFavorite
   };
+};
+
+export const useRing = () => {
+  const ring = uni.createInnerAudioContext();
+
+  ring.autoplay = false;
+  ring.src = ringtone;
+  ring.loop = true;
+
+  ring.onPlay(() => {
+    console.log('铃声开始播放');
+  });
+
+  ring.onError((res) => {
+    console.log('铃声播放错误', res);
+  });
+
+  const toggleRing = () => {
+    ring.paused ? ring.play() : ring.pause();
+  };
+
+  const playRing = () => {
+    if (ring.paused) {
+      ring.play();
+    }
+  };
+
+  const pauseRing = () => {
+    ring.pause();
+  };
+
+  return { playRing, pauseRing, toggleRing, ring };
 };
