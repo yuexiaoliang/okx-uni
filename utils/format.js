@@ -25,9 +25,7 @@ export const formatFloat = (num) => {
   const n = Number(num);
   if (isNaN(n)) return num;
 
-  if (n >= 1) {
-    return n.toFixed(2); // 保留两位小数
-  } else {
-    return n.toFixed(Math.abs(Math.log10(n)) + 4);
-  }
+  const result = n.toFixed(Math.abs(Math.log10(n)) + 4);
+
+  return result;
 };
