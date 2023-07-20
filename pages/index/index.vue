@@ -20,7 +20,7 @@ const { playRing, pauseRing } = useRing();
 const ws = createWebSocketClient({
   url: 'wss://wspri.okx.com:8443/ws/v5/inner-public',
   pingInterval: 30000,
-  reconnectInterval: 3000,
+  reconnectInterval: 1000,
   maxReconnectAttempts: 20,
 
   open() {
