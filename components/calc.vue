@@ -108,7 +108,9 @@ function setPercents(num) {
 <template>
   <uni-popup ref="popupRef" background-color="#171717" @change="onPopupChange">
     <div class="calc-price">
-      <div class="name">{{ value?.name || '-' }}</div>
+      <div class="name">
+        {{ value?.name || '-' }}<span class="open">{{ value?.open || '' }}</span>
+      </div>
 
       <input v-model="price" type="number" class="price" @input="onPriceInput" />
 
@@ -129,7 +131,7 @@ function setPercents(num) {
 
   .name {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     font-size: 18px;
     font-weight: bold;
 
@@ -141,6 +143,13 @@ function setPercents(num) {
       height: 1em;
       background-color: $uni-color-warning;
       border-radius: 2px;
+    }
+
+    .open {
+      margin-left: 10px;
+      font-size: 14px;
+      font-weight: normal;
+      color: $uni-text-color-grey;
     }
   }
 

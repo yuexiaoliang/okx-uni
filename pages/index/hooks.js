@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import dayjs from 'dayjs';
 
 import ringtone from '@/static/audios/ringtone.mp3';
@@ -83,10 +83,14 @@ export const useHistoryData = () => {
     clearHistoryBeforeTime();
 
     const obj = {};
-    list.forEach((_item, index) => {
+    list.forEach((_item) => {
+      const { changePer1M, changePer1d, changePer1h, changePer1w, changePer5m } = _item;
       obj[_item.name] = {
-        changePer: _item.changePer,
-        ranking: index
+        changePer1M,
+        changePer1d,
+        changePer1h,
+        changePer1w,
+        changePer5m
       };
     });
 
@@ -103,39 +107,59 @@ export const useHistoryData = () => {
 
 // 列表
 export const useList = () => {
-  const { getHistoryByTime } = useHistoryData();
   const { setImportantData } = useImportantData();
 
-  const list = ref([]);
+  // 数据周期
+  const periods = ref([
+    { label: '5分钟', value: '5m' },
+    { label: '1小时', value: '1h' },
+    { label: '1天', value: '1d' },
+    { label: '1周', value: '1w' },
+    { label: '1月', value: '1M' }
+  ]);
+
+  // 5m-5分钟、1h-1小时、1d-1天、1w-1周、1M-1月
+  const period = ref('1d');
+
+  const _data = reactive({});
+
+  const list = computed(() =>
+    Object.values(_data)
+      .filter((item) => item.changePer1d > 0.02)
+      .sort((a, b) => b.changePer - a.changePer)
+  );
 
   const setList = (data) => {
-    // 前一分钟的数据
-    const minuteAgoData = getHistoryByTime();
+    data.forEach((item) => {
+      const { instId, changePer1M, changePer1d, changePer1h, changePer1w, changePer5m, lastPrice, zone } = item;
 
-    list.value = data.map((item) => {
+      if (zone !== 'utc8') return;
+
       const name = item.instId.split('-')[0];
 
-      if (minuteAgoData) {
-        // 前一分钟的涨幅
-        const oneMinuteAgoChangePer = minuteAgoData?.[name]?.changePer;
+      const changePer = {
+        '5m': changePer5m,
+        '1h': changePer1h,
+        '1d': changePer1d,
+        '1w': changePer1w,
+        '1M': changePer1M
+      }[period.value];
 
-        if (oneMinuteAgoChangePer) {
-          // 计算规则为一分钟之内上涨 N 以上
-          setImportantData(name, item.changePer - oneMinuteAgoChangePer > PLAY_UP_RISING_VOLUME);
-        }
-      }
+      // 如果 1 小时之内涨幅超过 5%，则设置为重点关注
+      setImportantData(name, item.changePer1h > PLAY_UP_RISING_VOLUME);
 
       const result = {
         ...item,
-        name,
 
+        name,
+        changePer,
         // 涨幅变化显示的文字
-        changePerText: formatPercent(item.changePer),
+        changePerText: formatPercent(changePer),
 
         // Logo 地址
         logo: `https://static.okx.com/cdn/oksupport/asset/currency/icon/${name.toLowerCase()}.png`,
 
-        old: minuteAgoData?.[name],
+        // old: minuteAgoData?.[name],
 
         // 24小时成交量显示的文字
         volume24hText: formatPrice(item.volume24h),
@@ -144,14 +168,16 @@ export const useList = () => {
         turnOver24hText: formatPrice(item.turnOver24h),
 
         // 开盘价（原价）
-        open: formatFloat(calcOpen(item)),
+        open: formatFloat(calcOpen({ changePer, lastPrice }))
       };
 
-      return result;
+      _data[instId] = result;
     });
   };
 
   return {
+    periods,
+    period,
     list,
     setList
   };

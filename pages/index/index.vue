@@ -1,5 +1,6 @@
 <script setup>
 import { watch, ref } from 'vue';
+import dayjs from 'dayjs';
 import { createWebSocketClient } from '@/utils/socket';
 import { getMinuteAfter } from '@/utils/common';
 import { formatPercent } from '@/utils/format';
@@ -18,7 +19,7 @@ const { hasImportantData, setImportantData } = useImportantData();
 const { playRing, pauseRing } = useRing();
 
 const ws = createWebSocketClient({
-  url: 'wss://wspri.okx.com:8443/ws/v5/inner-public',
+  url: 'wss://wspri.okx.com:8443/ws/v5/ipublic',
   pingInterval: 30000,
   reconnectInterval: 1000,
   maxReconnectAttempts: 20,
@@ -26,13 +27,16 @@ const ws = createWebSocketClient({
   open() {
     ws.send({
       op: 'subscribe',
-      args: [{ channel: 'up-rank-s', ccy: 'USDT' }]
+      args: [{ channel: 'web-up-down-rank-s', ccy: 'USDT' }]
     });
   },
 
   message(data) {
-    if (!data.data?.[0]?.utc8) return;
-    setList(data.data[0].utc8);
+    if (data?.arg?.channel !== 'web-up-down-rank-s') return;
+    if (!Array.isArray(data?.data)) return;
+
+    const time = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    setList(data.data.map((item) => ({ ...item, time })));
   }
 });
 
