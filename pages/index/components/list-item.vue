@@ -113,8 +113,8 @@ const removeFresh = (item) => {
 
   &::before {
     content: '';
-    height: 34px;
-    width: 34px;
+    height: 30px;
+    width: 30px;
     background-image: v-bind(logo);
     background-size: cover;
     background-position: left center;
