@@ -23,25 +23,27 @@ export const useRing = () => {
     console.log('铃声开始播放');
   });
 
+  ring.onStop(() => {
+    console.log('铃声停止播放');
+  });
+
   ring.onError((res) => {
     console.log('铃声播放错误', res);
   });
 
   const toggleRing = () => {
-    ring.paused ? ring.play() : ring.pause();
+    ring.paused ? ring.play() : ring.stop();
   };
 
   const playRing = () => {
-    if (ring.paused) {
-      ring.play();
-    }
+    ring.play();
   };
 
-  const pauseRing = () => {
-    ring.pause();
+  const stopRing = () => {
+    ring.stop();
   };
 
-  return { playRing, pauseRing, toggleRing, ring };
+  return { playRing, stopRing, toggleRing, ring };
 };
 
 // 着重关注
@@ -60,7 +62,7 @@ export const useImportantData = () => {
 
   // 删除重要数据
   const removeImportantData = (key) => {
-    delete importantData.value[key];
+    delete importantData.value?.[key];
   };
 
   const hasImportantData = (key) => {
@@ -77,8 +79,8 @@ export const useImportantData = () => {
 
 // 列表
 export const useList = () => {
-  const { setImportantData } = useImportantData();
-  const { playRing, pauseRing } = useRing();
+  const { setImportantData, hasImportantData } = useImportantData();
+  const { playRing, stopRing } = useRing();
 
   // 数据周期
   const periods = ref([
@@ -104,14 +106,14 @@ export const useList = () => {
 
   const topList = computed(() => {
     return _list.value.filter((item) => {
-      return importantData.value?.[item.name] === true;
+      return hasImportantData(item.name);
     });
   });
 
   watch(
-    topList,
-    (list) => {
-      list.length > 0 ? playRing() : pauseRing();
+    () => topList.value.length,
+    (len) => {
+      len > 0 ? playRing() : stopRing();
     },
     {
       immediate: true
@@ -128,8 +130,8 @@ export const useList = () => {
 
       const changePer = changePer1d;
 
-      // 如果 1 小时之内涨幅超过 5%，则设置为重点关注
-      setImportantData(name, item.changePer5m > 0.02 && item.changePer1h > 0.05);
+      // 如果 5分钟之内涨幅超过 1% 并且 1 小时之内涨幅超过 5%，则设置为重点关注
+      setImportantData(name, item.changePer5m > 0.01 && item.changePer1h > 0.05);
 
       const result = {
         ...item,
