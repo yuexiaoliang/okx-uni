@@ -1,22 +1,12 @@
 <script setup>
-import { watch, ref } from 'vue';
+import { ref } from 'vue';
 import dayjs from 'dayjs';
 import { createWebSocketClient } from '@/utils/socket';
-import { getMinuteAfter } from '@/utils/common';
-import { formatPercent } from '@/utils/format';
-import { useHistoryData, useList, useFavorite, useImportantData, useRing } from './hooks';
-import { PAUSE_INTERVAL } from '@/constants';
+import { useList } from './hooks';
 import Calc from '@/components/calc.vue';
+import ListItem from './components/list-item.vue';
 
-const { setHistoryByTime } = useHistoryData();
-
-const { list, setList } = useList();
-
-const { addToFavorites, hasFavorite } = useFavorite();
-
-const { hasImportantData, setImportantData } = useImportantData();
-
-const { playRing, pauseRing } = useRing();
+const { list, topList, setList } = useList();
 
 const ws = createWebSocketClient({
   url: 'wss://wspri.okx.com:8443/ws/v5/ipublic',
@@ -40,93 +30,19 @@ const ws = createWebSocketClient({
   }
 });
 
-const removeFresh = (item) => {
-  // 停止响铃
-  pauseRing();
-
-  // 使 3 分钟内不再响铃
-  setImportantData(item.name, getMinuteAfter(PAUSE_INTERVAL));
-};
-
-const getItemRankingChange = (item, index) => {
-  return index - item.old.ranking;
-};
-
 const currentItem = ref({});
 const calcVisible = ref(false);
 const onItemClick = (item) => {
   currentItem.value = item;
   calcVisible.value = true;
 };
-
-watch(
-  () => list.value,
-  (val) => {
-    if (!Array.isArray(val)) return;
-
-    setHistoryByTime(val);
-
-    if (val.some((item) => hasImportantData(item.name))) {
-      playRing();
-    }
-  },
-  {
-    deep: true,
-    immediate: true
-  }
-);
 </script>
 
 <template>
   <ul class="list">
-    <li
-      v-for="(item, index) in list"
-      class="list__item"
-      :class="{
-        'list__item--fresh': hasImportantData(item.name)
-      }"
-      @click="onItemClick(item)"
-    >
-      <image :src="item.logo" mode="aspectFit" class="logo"></image>
+    <list-item v-for="item in topList" :key="item.name" :value="item" is-top></list-item>
 
-      <div class="info">
-        <div class="name">{{ item.name }}</div>
-        <div class="volume">{{ item.turnOver24hText }}</div>
-      </div>
-
-      <div class="price">{{ item.lastPrice }}</div>
-
-      <div
-        v-if="item.old"
-        class="ranking-change"
-        :class="{
-          'ranking-change--up': getItemRankingChange(item, index) > 0,
-          'ranking-change--down': getItemRankingChange(item, index) < 0
-        }"
-      >
-        {{ getItemRankingChange(item, index) === 0 ? '-' : getItemRankingChange(item, index) > 0 ? '↑' : '↓' }}
-        {{ getItemRankingChange(item, index) === 0 ? '-' : Math.abs(getItemRankingChange(item, index)) }}
-      </div>
-
-      <div
-        class="change-per"
-        :class="{
-          'change-per--up': item.changePer > 0,
-          'change-per--down': item.changePer < 0
-        }"
-      >
-        {{ item.changePerText }}
-        <div v-if="item.old" class="change">{{ formatPercent(item.changePer - item.old.changePer) }}</div>
-      </div>
-
-      <div v-if="hasImportantData(item.name)" @click.capture.stop="removeFresh(item)">
-        <uni-icons type="circle-filled" size="24" style="color: #fff" class="favorite"></uni-icons>
-      </div>
-
-      <div v-else @click.stop="addToFavorites(item)">
-        <uni-icons :type="hasFavorite(item.name) ? 'star-filled' : 'star'" size="24" class="favorite" :class="{ 'favorite--true': hasFavorite(item.name) }"></uni-icons>
-      </div>
-    </li>
+    <list-item v-for="item in list" :key="item.name" :value="item" @click="onItemClick(item)"></list-item>
   </ul>
 
   <calc v-model:visible="calcVisible" :value="currentItem" />
@@ -143,106 +59,5 @@ page {
   padding: 0 $uni-spacing-col-base $uni-spacing-row-base;
   margin: 0;
   list-style: none;
-
-  &__item {
-    display: flex;
-    align-items: center;
-    padding: $uni-spacing-col-base $uni-spacing-row-base;
-    margin: 0;
-    margin-bottom: $uni-spacing-col-base;
-    background-color: $uni-bg-color-grey;
-    border-radius: $uni-border-radius;
-
-    &--fresh {
-      animation: bg-color-change 0.7s infinite alternate;
-
-      @keyframes bg-color-change {
-        0% {
-          background-color: $uni-bg-color-grey;
-        }
-
-        100% {
-          background-color: $uni-color-primary;
-        }
-      }
-    }
-
-    .logo {
-      margin-right: $uni-spacing-row-sm;
-      width: 36px;
-      height: 36px;
-    }
-
-    .info {
-      display: flex;
-      flex-direction: column;
-
-      .name {
-        font-size: $uni-font-size-base;
-      }
-
-      .volume {
-        font-size: $uni-font-size-sm;
-        color: $uni-text-color-grey;
-      }
-    }
-
-    .price {
-      font-weight: bold;
-      margin-left: auto;
-    }
-
-    .ranking-change {
-      margin-left: $uni-spacing-row-sm;
-      width: 30px;
-      text-align: right;
-
-      &--up {
-        color: $uni-color-warning;
-      }
-
-      &--down {
-        color: $uni-color-error;
-      }
-    }
-
-    .change-per {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      margin-left: 12px;
-      padding: 3px 0;
-      width: 62px;
-      min-height: 18px;
-      line-height: 1;
-      background-color: $uni-bg-color;
-      border-radius: 2px;
-
-      &--up {
-        background-color: $uni-color-success;
-      }
-
-      &--down {
-        background-color: $uni-color-error;
-      }
-
-      .change {
-        margin-top: 3px;
-        font-size: $uni-font-size-sm;
-        color: #000;
-        transform: scale3d(0.8, 0.8, 1);
-      }
-    }
-
-    .favorite {
-      margin-left: $uni-spacing-row-sm;
-      color: $uni-text-color-grey;
-
-      &--true {
-        color: $uni-color-warning !important;
-      }
-    }
-  }
 }
 </style>
