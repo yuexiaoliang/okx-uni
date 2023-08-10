@@ -8,27 +8,53 @@ import ListItem from './components/list-item.vue';
 
 const { list, topList, setList } = useList();
 
-const ws = createWebSocketClient({
-  url: 'wss://wspri.okx.com:8443/ws/v5/ipublic',
-  pingInterval: 30000,
-  reconnectInterval: 1000,
-  maxReconnectAttempts: 20,
-
-  open() {
-    ws.send({
-      op: 'subscribe',
-      args: [{ channel: 'web-up-down-rank-s', ccy: 'USDT' }]
+const getAll = async () => {
+  let ids;
+  try {
+    const res = await uni.request({
+      url: 'https://aws.okx.com/priapi/v5/rubik/web/public/up-down-rank?period=1D&zone=utc8&type=USDT&countryFilter=1&rank=0',
+      method: 'GET'
     });
-  },
 
-  message(data) {
-    if (data?.arg?.channel !== 'web-up-down-rank-s') return;
-    if (!Array.isArray(data?.data)) return;
+    const list = res?.data?.data?.data || [];
+    if (list) {
+      ids = list.map((item) => item.instId);
+    }
+  } catch (error) {}
 
-    const time = dayjs().format('YYYY-MM-DD HH:mm:ss');
-    setList(data.data.map((item) => ({ ...item, time })));
-  }
-});
+  const ws = createWebSocketClient({
+    url: 'wss://wspri.okx.com:8443/ws/v5/ipublic',
+    pingInterval: 30000,
+    reconnectInterval: 1000,
+    maxReconnectAttempts: 20,
+
+    open() {
+      ws.send({
+        op: 'subscribe',
+        args: [{ channel: 'web-up-down-rank-s', ccy: 'USDT' }]
+      });
+    },
+
+    message(res) {
+      if (res?.arg?.channel !== 'web-up-down-rank-s') return;
+      if (!Array.isArray(res?.data)) return;
+
+      const time = dayjs().format('YYYY-MM-DD HH:mm:ss');
+
+      let data = res.data;
+
+      if (Array.isArray(ids)) {
+        data = data.filter((item) => ids.includes(item.instId));
+      }
+
+      data = data.map((item) => ({ ...item, time }));
+
+      setList(data);
+    }
+  });
+};
+
+getAll();
 
 const currentItem = ref({});
 const calcVisible = ref(false);
