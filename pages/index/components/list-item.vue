@@ -22,7 +22,7 @@ const { addToFavorites, hasFavorite } = useFavorite();
 const { setImportantData, hasImportantData } = useImportantData();
 
 const removeFresh = (item) => {
-  // 使 3 分钟内不再响铃
+  // 使 5 分钟内不再响铃
   setImportantData(item.name, getMinuteAfter(5));
 };
 </script>
