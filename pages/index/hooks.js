@@ -5,7 +5,6 @@ import ringtone from '@/static/audios/ringtone.mp3';
 
 import { formatPrice, formatPercent, formatFloat } from '@/utils/format';
 import { useStorageSync } from '@/hooks/storage';
-import { PLAY_UP_RISING_VOLUME } from '@/constants';
 
 // 重点关注
 const importantData = useStorageSync('important-data', {});
@@ -130,7 +129,7 @@ export const useList = () => {
       const changePer = changePer1d;
 
       // 如果 1 小时之内涨幅超过 5%，则设置为重点关注
-      setImportantData(name, item.changePer5m > PLAY_UP_RISING_VOLUME);
+      setImportantData(name, item.changePer5m > 0.02 && item.changePer1h > 0.05);
 
       const result = {
         ...item,

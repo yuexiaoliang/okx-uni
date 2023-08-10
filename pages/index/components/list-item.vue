@@ -1,7 +1,6 @@
 <script setup>
 import { computed } from 'vue';
 import { getMinuteAfter } from '@/utils/common';
-import { PAUSE_INTERVAL } from '@/constants';
 import { useFavorite, useImportantData } from '../hooks';
 
 const emit = defineEmits(['click']);
@@ -24,7 +23,7 @@ const { setImportantData, hasImportantData } = useImportantData();
 
 const removeFresh = (item) => {
   // 使 3 分钟内不再响铃
-  setImportantData(item.name, getMinuteAfter(PAUSE_INTERVAL));
+  setImportantData(item.name, getMinuteAfter(5));
 };
 </script>
 
